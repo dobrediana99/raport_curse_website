@@ -23,6 +23,7 @@ describe("buildExcelReport columns", () => {
             endExclusiveMs: 0,
             labelYm: "2025-12",
           },
+          orderDateFilterApplied: true,
           totalOrdersInPeriod: 1,
           totalOrdersNonWebsite: 1,
           totalOrdersWithValidEmail: 1,
@@ -53,6 +54,7 @@ describe("buildExcelReport columns", () => {
         const v = row.getCell(2).value;
         if (typeof k === "string") metrics.set(k, typeof v === "number" || typeof v === "string" ? v : "");
       });
+      expect(metrics.get("order_date_filter_applied")).toBe("true");
       expect(metrics.get("total_website_requests_board_1")).toBe(10);
       expect(metrics.get("total_website_requests_board_2")).toBe(3);
       expect(metrics.get("total_website_requests_considered")).toBe(13);

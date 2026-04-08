@@ -8,7 +8,8 @@ import {
   createSolicitari2BoardDefinition,
   createSolicitariBoardDefinition,
 } from "../monday/mappers/requestBoardDefinitions.js";
-import { getPreviousMonthRange, isDateInRange } from "../domain/matching/previousMonthRange.js";
+import { isDateInRange } from "../domain/matching/previousMonthRange.js";
+import { resolveOrderDateFilterForRun } from "../domain/matching/orderDateFilter.js";
 import { WEBSITE_LABEL } from "../domain/matching/sourceMismatch.types.js";
 import { buildSourceMismatches } from "../domain/matching/sourceMismatchMatcher.js";
 import { buildExcelReport, type ExcelSummaryInput } from "../report/excelReportBuilder.js";
@@ -18,14 +19,18 @@ import { buildReportEmailHtml } from "../mail/reportEmailBuilder.js";
 export interface JobDeps {
   config: AppConfig;
   log: Logger;
+  /** When true, all orders are matched (no previous-month filter on Data Ctr.). Manual/debug only. */
+  noDateFilter?: boolean;
 }
 
 export class MonthlySourceAuditJob {
   constructor(private readonly deps: JobDeps) {}
 
   async run(): Promise<void> {
-    const { config, log } = this.deps;
-    const range = getPreviousMonthRange(config.APP_TIMEZONE);
+    const { config, log, noDateFilter } = this.deps;
+    const dateCtx = resolveOrderDateFilterForRun(config.APP_TIMEZONE, noDateFilter);
+    const range = dateCtx.range;
+    const runMonthLabel = dateCtx.applyMonthFilter ? range.labelYm : "ALL_DATES";
     const generatedAt = new Date().toISOString();
 
     log.info(
@@ -33,6 +38,7 @@ export class MonthlySourceAuditJob {
         auditedMonth: range.labelYm,
         start: range.startIso,
         end: range.endIso,
+        orderDateFilterApplied: dateCtx.applyMonthFilter,
         ordersBoard: config.ORDERS_BOARD_ID,
         requestsBoard1: config.REQUESTS_BOARD_ID,
         requestsBoard2: config.REQUESTS2_BOARD_ID,
@@ -57,27 +63,32 @@ export class MonthlySourceAuditJob {
     const missingDealDate = orders.filter((o) => !o.dealCreationDate).length;
     if (missingDealDate > 0) {
       log.warn(
-        { count: missingDealDate },
-        "Order items missing Data Ctr.; they are excluded from the audited period filter",
+        { count: missingDealDate, orderDateFilterApplied: dateCtx.applyMonthFilter },
+        dateCtx.applyMonthFilter
+          ? "Order items missing Data Ctr.; they are excluded from the audited period filter"
+          : "Order items missing Data Ctr. (still in scope: order date filter disabled)",
       );
     }
 
-    const inAuditedPeriod = orders.filter(
-      (o) => o.dealCreationDate != null && isDateInRange(o.dealCreationDate, range),
-    );
+    const inAuditedPeriod = dateCtx.applyMonthFilter
+      ? orders.filter((o) => o.dealCreationDate != null && isDateInRange(o.dealCreationDate, range))
+      : orders;
     const skippedNoEmail = inAuditedPeriod.filter(
       (o) => o.sursaClient !== WEBSITE_LABEL && o.emailsNormalized.length === 0,
     ).length;
     if (skippedNoEmail > 0) {
       log.warn(
         { count: skippedNoEmail },
-        "Non-Website orders in audited month skipped: no valid client email after normalization",
+        dateCtx.applyMonthFilter
+          ? "Non-Website orders in audited month skipped: no valid client email after normalization"
+          : "Non-Website orders skipped: no valid client email after normalization (all dates mode)",
       );
     }
 
-    const { rows, stats } = buildSourceMismatches(orders, requests, range, range.labelYm, {
+    const { rows, stats } = buildSourceMismatches(orders, requests, range, runMonthLabel, {
       requestsBoard1Id: config.REQUESTS_BOARD_ID,
       requestsBoard2Id: config.REQUESTS2_BOARD_ID,
+      skipOrderDateFilter: !dateCtx.applyMonthFilter,
     });
 
     log.info({ stats }, "Matching complete");
@@ -85,6 +96,7 @@ export class MonthlySourceAuditJob {
     const summary: ExcelSummaryInput = {
       generatedAtIso: generatedAt,
       auditedRange: range,
+      orderDateFilterApplied: dateCtx.applyMonthFilter,
       totalOrdersInPeriod: stats.totalOrdersInPeriod,
       totalOrdersNonWebsite: stats.totalOrdersNonWebsite,
       totalOrdersWithValidEmail: stats.totalOrdersWithValidEmail,
@@ -97,7 +109,7 @@ export class MonthlySourceAuditJob {
     };
 
     const safeTs = generatedAt.replace(/[:.]/g, "-");
-    const fileName = `source-audit-${range.labelYm}-${safeTs}.xlsx`;
+    const fileName = `source-audit-${runMonthLabel}-${safeTs}.xlsx`;
     const outputPath = join(config.REPORT_OUTPUT_DIR, fileName);
 
     await buildExcelReport(outputPath, rows, summary);
@@ -113,7 +125,7 @@ export class MonthlySourceAuditJob {
     );
 
     const mailer = new Mailer(config, log);
-    const subject = `[Audit monday] Erori sursa client - ${range.labelYm}`;
+    const subject = `[Audit monday] Erori sursa client - ${runMonthLabel}`;
 
     if (rows.length === 0 && !config.SEND_EMPTY_REPORT) {
       log.info("No matches and SEND_EMPTY_REPORT=false; skipping email");
@@ -125,6 +137,7 @@ export class MonthlySourceAuditJob {
 
     const html = buildReportEmailHtml({
       auditedRange: range,
+      orderDateFilterApplied: dateCtx.applyMonthFilter,
       matchCount: rows.length,
       ordersChecked: stats.totalOrdersInPeriod,
       generatedAtIso: generatedAt,

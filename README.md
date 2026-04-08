@@ -82,6 +82,16 @@ npm run start
 npm run audit:once
 ```
 
+**Debug / test fără filtru pe Data Ctr. (toate comenzile din board):** doar împreună cu `--once`; modul cron ignoră acest flag.
+
+```bash
+npm run audit:once -- --no-date-filter
+# sau după build:
+node dist/main.js --once --no-date-filter
+```
+
+În Summary Excel apare `order_date_filter_applied: false`, iar coloana „Run Month” din sheet-ul Erori folosește eticheta `ALL_DATES`.
+
 În development (fără build):
 
 ```bash

@@ -7,6 +7,8 @@ import type { MonthRange } from "../domain/matching/previousMonthRange.js";
 export interface ExcelSummaryInput {
   generatedAtIso: string;
   auditedRange: MonthRange;
+  /** When false, orders were not restricted to auditedRange (debug run). */
+  orderDateFilterApplied: boolean;
   totalOrdersInPeriod: number;
   totalOrdersNonWebsite: number;
   totalOrdersWithValidEmail: number;
@@ -123,10 +125,18 @@ export async function buildExcelReport(
     views: [{ state: "frozen", ySplit: 1 }],
   });
 
+  const dateStart = summary.orderDateFilterApplied
+    ? summary.auditedRange.startIso
+    : "(all orders — no date filter)";
+  const dateEnd = summary.orderDateFilterApplied
+    ? summary.auditedRange.endIso
+    : "(all orders — no date filter)";
+
   const summaryRows: [string, string | number][] = [
     ["generated_at", summary.generatedAtIso],
-    ["audited_month_start", summary.auditedRange.startIso],
-    ["audited_month_end", summary.auditedRange.endIso],
+    ["order_date_filter_applied", summary.orderDateFilterApplied ? "true" : "false"],
+    ["audited_month_start", dateStart],
+    ["audited_month_end", dateEnd],
     ["total_orders_in_period", summary.totalOrdersInPeriod],
     ["total_orders_non_website", summary.totalOrdersNonWebsite],
     ["total_orders_with_valid_email", summary.totalOrdersWithValidEmail],

@@ -180,6 +180,19 @@ describe("buildSourceMismatches", () => {
     expect(rows[0]!.allMatchedRequestBoards).toBe("Solicitari; Solicitari 2");
   });
 
+  it("skipOrderDateFilter includes orders outside audited month", () => {
+    const orders = [
+      baseOrder({ dealCreationDate: "2020-01-01", dealCreationAtUtcMs: Date.parse("2020-01-01T12:00:00Z") }),
+    ];
+    const reqs = [baseRequest()];
+    const { rows, stats } = buildSourceMismatches(orders, reqs, range, range.labelYm, {
+      ...matcherOpts,
+      skipOrderDateFilter: true,
+    });
+    expect(rows).toHaveLength(1);
+    expect(stats.totalOrdersInPeriod).toBe(1);
+  });
+
   it("summary counts website requests per board", () => {
     const orders: OrderRow[] = [];
     const reqs: UnifiedRequestRow[] = [

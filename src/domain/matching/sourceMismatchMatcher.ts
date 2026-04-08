@@ -8,6 +8,8 @@ import { isDateInRange, type MonthRange } from "./previousMonthRange.js";
 export interface MismatchMatcherOptions {
   requestsBoard1Id: number;
   requestsBoard2Id: number;
+  /** When true, every loaded order is in scope (no Data Ctr. month filter). */
+  skipOrderDateFilter?: boolean;
 }
 
 function sortKeyRequestCreated(r: UnifiedRequestRow): number {
@@ -50,9 +52,11 @@ export function buildSourceMismatches(
   runMonthLabel: string,
   opts: MismatchMatcherOptions,
 ): MatchSummary {
-  const ordersInPeriod = orders.filter(
-    (o) => o.dealCreationDate != null && isDateInRange(o.dealCreationDate, auditedRange),
-  );
+  const ordersInPeriod = opts.skipOrderDateFilter
+    ? orders
+    : orders.filter(
+        (o) => o.dealCreationDate != null && isDateInRange(o.dealCreationDate, auditedRange),
+      );
 
   const nonWebsite = ordersInPeriod.filter((o) => o.sursaClient !== WEBSITE_LABEL);
   const withEmail = nonWebsite.filter((o) => o.emailsNormalized.length > 0);
