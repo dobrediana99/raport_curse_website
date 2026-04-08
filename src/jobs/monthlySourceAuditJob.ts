@@ -3,7 +3,11 @@ import type { AppConfig } from "../config/env.js";
 import type { Logger } from "../core/logger.js";
 import { MondayClient } from "../monday/mondayClient.js";
 import { OrdersRepository } from "../monday/repositories/orders.repository.js";
-import { RequestsRepository } from "../monday/repositories/requests.repository.js";
+import { RequestsBoardRepository } from "../monday/repositories/requests.repository.js";
+import {
+  createSolicitari2BoardDefinition,
+  createSolicitariBoardDefinition,
+} from "../monday/mappers/requestBoardDefinitions.js";
 import { getPreviousMonthRange, isDateInRange } from "../domain/matching/previousMonthRange.js";
 import { WEBSITE_LABEL } from "../domain/matching/sourceMismatch.types.js";
 import { buildSourceMismatches } from "../domain/matching/sourceMismatchMatcher.js";
@@ -30,19 +34,25 @@ export class MonthlySourceAuditJob {
         start: range.startIso,
         end: range.endIso,
         ordersBoard: config.ORDERS_BOARD_ID,
-        requestsBoard: config.REQUESTS_BOARD_ID,
+        requestsBoard1: config.REQUESTS_BOARD_ID,
+        requestsBoard2: config.REQUESTS2_BOARD_ID,
       },
       "Starting monthly source audit job",
     );
 
     const client = new MondayClient(config, log);
     const ordersRepo = new OrdersRepository(client, config.ORDERS_BOARD_ID, log);
-    const requestsRepo = new RequestsRepository(client, config.REQUESTS_BOARD_ID, log);
+    const solicitariDef = createSolicitariBoardDefinition(config.REQUESTS_BOARD_ID);
+    const solicitari2Def = createSolicitari2BoardDefinition(config.REQUESTS2_BOARD_ID);
+    const requestsRepo1 = new RequestsBoardRepository(client, solicitariDef, log);
+    const requestsRepo2 = new RequestsBoardRepository(client, solicitari2Def, log);
 
-    const [orders, requests] = await Promise.all([
+    const [orders, req1, req2] = await Promise.all([
       ordersRepo.fetchAllOrders(),
-      requestsRepo.fetchAllRequests(),
+      requestsRepo1.fetchAllUnified(),
+      requestsRepo2.fetchAllUnified(),
     ]);
+    const requests = [...req1, ...req2];
 
     const missingDealDate = orders.filter((o) => !o.dealCreationDate).length;
     if (missingDealDate > 0) {
@@ -65,7 +75,10 @@ export class MonthlySourceAuditJob {
       );
     }
 
-    const { rows, stats } = buildSourceMismatches(orders, requests, range, range.labelYm);
+    const { rows, stats } = buildSourceMismatches(orders, requests, range, range.labelYm, {
+      requestsBoard1Id: config.REQUESTS_BOARD_ID,
+      requestsBoard2Id: config.REQUESTS2_BOARD_ID,
+    });
 
     log.info({ stats }, "Matching complete");
 
@@ -75,6 +88,8 @@ export class MonthlySourceAuditJob {
       totalOrdersInPeriod: stats.totalOrdersInPeriod,
       totalOrdersNonWebsite: stats.totalOrdersNonWebsite,
       totalOrdersWithValidEmail: stats.totalOrdersWithValidEmail,
+      totalWebsiteRequestsBoard1: stats.totalWebsiteRequestsBoard1,
+      totalWebsiteRequestsBoard2: stats.totalWebsiteRequestsBoard2,
       totalWebsiteRequestsConsidered: stats.totalWebsiteRequestsConsidered,
       totalMatchesFound: stats.totalMatchesFound,
       totalReportRows: rows.length,

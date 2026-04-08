@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer";
 import type { AppConfig } from "../config/env.js";
 import type { Logger } from "../core/logger.js";
+import { formatRecipientsForNodemailer, parseMailRecipients } from "./parseMailRecipients.js";
 
 export interface SendMailInput {
   subject: string;
@@ -10,11 +11,8 @@ export interface SendMailInput {
 
 function splitAddresses(s: string | undefined): string | undefined {
   if (!s?.trim()) return undefined;
-  const parts = s
-    .split(/[,;]+/)
-    .map((x) => x.trim())
-    .filter(Boolean);
-  return parts.length ? parts.join(", ") : undefined;
+  const parts = parseMailRecipients(s);
+  return parts.length ? formatRecipientsForNodemailer(parts) : undefined;
 }
 
 export class Mailer {
@@ -35,22 +33,25 @@ export class Mailer {
   }
 
   async send(input: SendMailInput): Promise<void> {
-    const to = splitAddresses(this.config.MAIL_TO);
-    if (!to) {
+    const toList = parseMailRecipients(this.config.MAIL_TO);
+    if (toList.length === 0) {
       throw new Error("MAIL_TO is empty");
     }
 
     try {
       await this.transporter.sendMail({
         from: this.config.MAIL_FROM,
-        to,
+        to: toList,
         cc: splitAddresses(this.config.MAIL_CC),
         bcc: splitAddresses(this.config.MAIL_BCC),
         subject: input.subject,
         html: input.html,
         attachments: input.attachments,
       });
-      this.log.info({ subject: input.subject, to }, "Email sent successfully");
+      this.log.info(
+        { subject: input.subject, to: formatRecipientsForNodemailer(toList) },
+        "Email sent successfully",
+      );
     } catch (e) {
       this.log.error({ err: e, subject: input.subject }, "Failed to send email");
       throw e;

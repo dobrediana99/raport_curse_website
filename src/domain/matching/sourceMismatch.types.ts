@@ -1,12 +1,14 @@
 import type { OrderRow } from "../../monday/mappers/orders.mapper.js";
-import type { RequestRow } from "../../monday/mappers/requests.mapper.js";
+import type { UnifiedRequestRow } from "../requests/unifiedRequest.types.js";
 
 export interface SourceMismatchRow {
   runMonthLabel: string;
   order: OrderRow;
-  selectedRequest: RequestRow;
+  selectedRequest: UnifiedRequestRow;
   emailMatch: string;
   matchesCount: number;
+  /** Distinct board names among all matching requests, sorted, joined with "; " */
+  allMatchedRequestBoards: string;
   profitEur: number | null;
   notes: string;
 }

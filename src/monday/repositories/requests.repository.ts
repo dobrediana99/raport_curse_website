@@ -1,47 +1,27 @@
 import type { MondayClient } from "../mondayClient.js";
-import { QUERY_ITEMS_PAGE } from "../mondayQueries.js";
-import type { MondayItemRaw } from "../../core/types.js";
 import type { Logger } from "../../core/logger.js";
-import { mapRequestItem } from "../mappers/requests.mapper.js";
-import type { RequestRow } from "../mappers/requests.mapper.js";
+import type { UnifiedRequestRow } from "../../domain/requests/unifiedRequest.types.js";
+import type { RequestBoardDefinition } from "../mappers/requestBoard.types.js";
+import { mapItemToUnifiedRequest } from "../mappers/unifiedRequest.mapper.js";
+import { paginateBoardItems } from "./paginateBoardItems.js";
 
-interface GqlItemsPage {
-  boards: Array<{
-    items_page: { cursor: string | null; items: MondayItemRaw[] } | null;
-  } | null> | null;
-}
-
-export class RequestsRepository {
+/**
+ * Fetches all items from one requests-type board and maps them to {@link UnifiedRequestRow}.
+ */
+export class RequestsBoardRepository {
   constructor(
     private readonly client: MondayClient,
-    private readonly boardId: number,
+    private readonly definition: RequestBoardDefinition,
     private readonly log: Logger,
   ) {}
 
-  async fetchAllRequests(): Promise<RequestRow[]> {
-    const items: MondayItemRaw[] = [];
-    let cursor: string | null = null;
-
-    do {
-      const data: GqlItemsPage = await this.client.query<GqlItemsPage>(QUERY_ITEMS_PAGE, {
-        boardId: [String(this.boardId)],
-        cursor,
-      });
-
-      const page = data.boards?.[0]?.items_page;
-      if (!page) {
-        this.log.warn({ boardId: this.boardId }, "Monday returned no items_page for requests board");
-        break;
-      }
-
-      items.push(...page.items);
-      cursor = page.cursor;
-      this.log.debug(
-        { boardId: this.boardId, batch: page.items.length, hasMore: Boolean(cursor) },
-        "Fetched requests page",
-      );
-    } while (cursor);
-
-    return items.map(mapRequestItem);
+  async fetchAllUnified(): Promise<UnifiedRequestRow[]> {
+    const items = await paginateBoardItems(
+      this.client,
+      this.definition.boardId,
+      this.log,
+      `requests:${this.definition.boardName}`,
+    );
+    return items.map((raw) => mapItemToUnifiedRequest(raw, this.definition));
   }
 }

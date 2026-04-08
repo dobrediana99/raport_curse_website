@@ -28,7 +28,7 @@ export function buildReportEmailHtml(params: {
   </ul>
   <p style="margin-top:16px;color:#444;">
     Raportul Excel atașat conține detalii pe linii (dacă există erori) și un sheet Summary cu agregate.
-    Logica: comenzi din luna anterioară cu sursă ≠ Website și cu email valid, pentru care există solicitare Website cu email comun.
+    Logica: comenzi din luna anterioară cu sursă ≠ Website și cu email valid, pentru care există solicitare Website (în board-urile Solicitari și Solicitari 2) cu email comun. Raportul arată din ce board provine solicitarea potrivită.
   </p>
 </body>
 </html>

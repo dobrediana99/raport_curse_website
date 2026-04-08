@@ -12,6 +12,7 @@ const envSchema = z.object({
 
   ORDERS_BOARD_ID: z.coerce.number().int().positive(),
   REQUESTS_BOARD_ID: z.coerce.number().int().positive(),
+  REQUESTS2_BOARD_ID: z.coerce.number().int().positive(),
 
   CRON_SCHEDULE: z.string().min(1).default("0 8 1 * *"),
   SEND_EMPTY_REPORT: z.coerce.boolean().default(false),

@@ -10,6 +10,8 @@ export interface ExcelSummaryInput {
   totalOrdersInPeriod: number;
   totalOrdersNonWebsite: number;
   totalOrdersWithValidEmail: number;
+  totalWebsiteRequestsBoard1: number;
+  totalWebsiteRequestsBoard2: number;
   totalWebsiteRequestsConsidered: number;
   totalMatchesFound: number;
   totalReportRows: number;
@@ -20,6 +22,9 @@ const ERROR_HEADERS = [
   "Run Month",
   "Nr Comanda",
   "Nr Solicitare",
+  "Request Board Name",
+  "Request Board ID",
+  "All Matched Request Boards",
   "Nume Client Comanda",
   "Nume Client Solicitare",
   "Email Match",
@@ -71,7 +76,10 @@ export async function buildExcelReport(
     wsE.addRow([
       r.runMonthLabel,
       r.order.nrComanda ?? "",
-      r.selectedRequest.nrSolicitare ?? "",
+      r.selectedRequest.requestNumber,
+      r.selectedRequest.boardName,
+      String(r.selectedRequest.boardId),
+      r.allMatchedRequestBoards,
       r.order.clientNameDisplay ?? "",
       r.selectedRequest.clientNameDisplay ?? "",
       r.emailMatch,
@@ -93,9 +101,9 @@ export async function buildExcelReport(
     ]);
   }
 
-  const profitCol = 11;
-  const profitEurCol = 13;
-  const matchesCol = 18;
+  const profitCol = 14;
+  const profitEurCol = 16;
+  const matchesCol = 21;
   for (let i = 2; i <= wsE.rowCount; i++) {
     const row = wsE.getRow(i);
     const p = row.getCell(profitCol);
@@ -106,10 +114,10 @@ export async function buildExcelReport(
     if (typeof mc.value === "number") mc.numFmt = "0";
   }
 
-  wsE.columns = ERROR_HEADERS.map((_, idx) => {
-    const widths = [12, 14, 14, 28, 28, 28, 36, 36, 22, 22, 14, 12, 12, 18, 18, 14, 14, 12, 14, 14, 48];
-    return { width: widths[idx] ?? 16 };
-  });
+  const widths = [
+    12, 14, 14, 18, 16, 28, 28, 28, 28, 36, 36, 22, 22, 14, 12, 12, 18, 18, 14, 14, 12, 14, 14, 48,
+  ];
+  wsE.columns = ERROR_HEADERS.map((_, idx) => ({ width: widths[idx] ?? 16 }));
 
   const wsS = wb.addWorksheet("Summary", {
     views: [{ state: "frozen", ySplit: 1 }],
@@ -122,6 +130,8 @@ export async function buildExcelReport(
     ["total_orders_in_period", summary.totalOrdersInPeriod],
     ["total_orders_non_website", summary.totalOrdersNonWebsite],
     ["total_orders_with_valid_email", summary.totalOrdersWithValidEmail],
+    ["total_website_requests_board_1", summary.totalWebsiteRequestsBoard1],
+    ["total_website_requests_board_2", summary.totalWebsiteRequestsBoard2],
     ["total_website_requests_considered", summary.totalWebsiteRequestsConsidered],
     ["total_matches_found", summary.totalMatchesFound],
     ["total_report_rows", summary.totalReportRows],
