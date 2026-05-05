@@ -157,6 +157,28 @@ Erori API monday: până la **3 încercări** cu backoff la `429` / `5xx`.
 - **Email**: `MAIL_TO` poate fi de forma `a@x.com, b@y.com` sau cu `;`. La fel `MAIL_CC` / `MAIL_BCC`.
 - **Cron**: `CRON_SCHEDULE` + `APP_TIMEZONE` (folosit de `node-cron`).
 
+## Variantă GRATUITĂ: rulare lunară cu GitHub Actions (fără server)
+
+Dacă vrei o rulare lunară fără să ții un PC/server pornit, poți folosi GitHub Actions (gratis pentru repo public și, de obicei, suficient și pentru repo privat cu minute incluse).
+
+- **Workflow**: `.github/workflows/monthly-audit.yml`
+- **Schedule**: GitHub folosește cron în **UTC** (vezi comentariul din fișier pentru diferența față de `Europe/Bucharest`).
+
+### Configurare (o singură dată)
+
+1. În GitHub repo: **Settings → Secrets and variables → Actions → New repository secret**
+2. Adaugă secretele (valori ca în `.env`), de exemplu:
+   - `MONDAY_API_TOKEN`, `MONDAY_API_URL`, `MONDAY_API_VERSION`
+   - `ORDERS_BOARD_ID`, `REQUESTS_BOARD_ID`, `REQUESTS2_BOARD_ID`
+   - `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`
+   - `MAIL_FROM`, `MAIL_TO`, `MAIL_CC`, `MAIL_BCC`
+   - `SEND_EMPTY_REPORT`, `ATTACH_REPORT_ON_EMPTY`
+
+### Rulare manuală din GitHub
+
+Actions → workflow **Monthly monday audit** → **Run workflow**
+- opțional `no_date_filter=true` ca să ruleze fără filtrul pe data comenzii.
+
 ## Securitate
 
 - Nu comite **`.env`** (este în `.gitignore`).
