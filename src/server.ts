@@ -49,17 +49,25 @@ async function main() {
         }
 
         running = true;
-        log.info("Cron endpoint triggered: running MonthlySourceAuditJob");
+        log.info("Cron endpoint triggered: starting MonthlySourceAuditJob (background)");
 
-        try {
-          await new MonthlySourceAuditJob({ config, log }).run();
-          return sendText(res, 200, "OK");
-        } catch (e) {
-          log.error({ err: e }, "Cron job failed");
-          return sendText(res, 500, "FAILED");
-        } finally {
-          running = false;
-        }
+        res.writeHead(202, { "Content-Type": "text/plain; charset=utf-8" });
+        res.end("Job started");
+
+        new MonthlySourceAuditJob({ config, log })
+          .run()
+          .then(() => {
+            log.info("Cron job completed successfully");
+          })
+          .catch((e) => {
+            log.error({ err: e }, "Cron job failed");
+          })
+          .finally(() => {
+            running = false;
+            log.info("Cron job lock released");
+          });
+
+        return;
       }
 
       return sendText(res, 404, "NOT_FOUND");
