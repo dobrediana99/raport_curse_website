@@ -4,6 +4,15 @@ export function buildReportEmailHtml(params: {
   auditedRange: MonthRange;
   /** Default true — production month filter on order Data Ctr. */
   orderDateFilterApplied?: boolean;
+  /** Optional extra summary stats (displayed when provided). */
+  stats?: {
+    totalOrdersInPeriod: number;
+    totalOrdersNonWebsite: number;
+    totalOrdersWithValidEmail: number;
+    totalWebsiteRequestsBoard1: number;
+    totalWebsiteRequestsBoard2: number;
+    totalWebsiteRequestsConsidered: number;
+  };
   matchCount: number;
   ordersChecked: number;
   generatedAtIso: string;
@@ -12,6 +21,7 @@ export function buildReportEmailHtml(params: {
   const {
     auditedRange,
     orderDateFilterApplied = true,
+    stats,
     matchCount,
     ordersChecked,
     generatedAtIso,
@@ -34,6 +44,20 @@ export function buildReportEmailHtml(params: {
     ? "<p><strong>Nu s-au identificat erori</strong> de atribuire a sursei pentru intervalul verificat.</p>"
     : `<p>S-au identificat <strong>${matchCount}</strong> cazuri suspecte (comenzi cu sursă diferită de Website, dar cu solicitare Website pe același email).</p>`;
 
+  const extraSummary = stats
+    ? `
+  <h3 style="margin:16px 0 8px;font-size:14px;">Summary</h3>
+  <ul style="margin-top:0;">
+    <li><strong>Comenzi în scope:</strong> ${stats.totalOrdersInPeriod}</li>
+    <li><strong>Comenzi non-Website:</strong> ${stats.totalOrdersNonWebsite}</li>
+    <li><strong>Comenzi non-Website cu email valid:</strong> ${stats.totalOrdersWithValidEmail}</li>
+    <li><strong>Solicitări Website (Solicitari):</strong> ${stats.totalWebsiteRequestsBoard1}</li>
+    <li><strong>Solicitări Website (Solicitari 2):</strong> ${stats.totalWebsiteRequestsBoard2}</li>
+    <li><strong>Total solicitări Website considerate:</strong> ${stats.totalWebsiteRequestsConsidered}</li>
+  </ul>
+`.trim()
+    : "";
+
   return `
 <!DOCTYPE html>
 <html>
@@ -47,6 +71,7 @@ export function buildReportEmailHtml(params: {
     <li><strong>Total erori raportate:</strong> ${matchCount}</li>
     <li><strong>Generat la:</strong> ${generatedAtIso}</li>
   </ul>
+  ${extraSummary}
   <p style="margin-top:16px;color:#444;">
     Raportul Excel atașat conține detalii pe linii (dacă există erori) și un sheet Summary cu agregate.
     ${footerLogic}

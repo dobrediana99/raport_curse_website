@@ -138,6 +138,14 @@ export class MonthlySourceAuditJob {
     const html = buildReportEmailHtml({
       auditedRange: range,
       orderDateFilterApplied: dateCtx.applyMonthFilter,
+      stats: {
+        totalOrdersInPeriod: stats.totalOrdersInPeriod,
+        totalOrdersNonWebsite: stats.totalOrdersNonWebsite,
+        totalOrdersWithValidEmail: stats.totalOrdersWithValidEmail,
+        totalWebsiteRequestsBoard1: stats.totalWebsiteRequestsBoard1,
+        totalWebsiteRequestsBoard2: stats.totalWebsiteRequestsBoard2,
+        totalWebsiteRequestsConsidered: stats.totalWebsiteRequestsConsidered,
+      },
       matchCount: rows.length,
       ordersChecked: stats.totalOrdersInPeriod,
       generatedAtIso: generatedAt,
