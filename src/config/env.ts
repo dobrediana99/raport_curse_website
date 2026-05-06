@@ -6,6 +6,9 @@ const envSchema = z.object({
   APP_TIMEZONE: z.string().min(1).default("Europe/Bucharest"),
   APP_VERSION: z.string().min(1).default("1.0.0"),
 
+  /** Optional secret for /cron endpoint when running in server mode. */
+  CRON_SECRET: z.string().optional(),
+
   MONDAY_API_TOKEN: z.string().min(1),
   MONDAY_API_URL: z.string().url().default("https://api.monday.com/v2"),
   MONDAY_API_VERSION: z.string().min(1).default("2025-01"),

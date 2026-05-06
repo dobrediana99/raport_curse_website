@@ -9,7 +9,8 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "start": "node dist/main.js",
+    "start": "node dist/server.js",
+    "start:scheduler": "node dist/main.js",
     "dev": "tsx src/main.ts",
     "audit:once": "tsx src/main.ts --once",
     "test": "vitest run",
