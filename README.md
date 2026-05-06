@@ -60,6 +60,33 @@ cp .env.example .env
 | `SMTP_*`, `MAIL_CC`, `MAIL_BCC` | Nodemailer |
 | `LOG_LEVEL` | `pino`: `info`, `debug`, etc. |
 
+## Email prin Google Workspace (OAuth2 recomandat)
+
+Pentru Google Workspace/Gmail, cea mai robustă variantă în cloud este **OAuth2** (în loc de parolă SMTP).
+
+Setează în env (Railway/GitHub Secrets) următoarele:
+- `SMTP_HOST=smtp.gmail.com`
+- `SMTP_PORT=587`
+- `SMTP_SECURE=false` (STARTTLS)
+- `SMTP_USER=diana.d@crystal-logistics-services.com`
+- `GMAIL_OAUTH_CLIENT_ID`
+- `GMAIL_OAUTH_CLIENT_SECRET`
+- `GMAIL_OAUTH_REFRESH_TOKEN`
+
+Dacă variabilele `GMAIL_OAUTH_*` sunt prezente, aplicația folosește OAuth2 automat; altfel revine la `SMTP_PASS`.
+
+## Email prin Gmail API (recomandat pe Railway)
+
+Pe unele hosting-uri (inclusiv Railway) conexiunile către SMTP pot avea timeouts. În acest caz, folosește **Gmail API** (nu SMTP).
+
+Setează în env (Railway/GitHub Secrets):
+- `GMAIL_API_CLIENT_ID`
+- `GMAIL_API_CLIENT_SECRET`
+- `GMAIL_API_REFRESH_TOKEN`
+- `GMAIL_API_SENDER` (ex. `diana.d@crystal-logistics-services.com`)
+
+Când `GMAIL_API_*` sunt setate, aplicația trimite email prin Gmail API automat (și nu mai folosește `SMTP_*`).
+
 ## Build
 
 ```bash

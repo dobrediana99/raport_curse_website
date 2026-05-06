@@ -27,6 +27,18 @@ const envSchema = z.object({
   SMTP_SECURE: z.coerce.boolean().default(false),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
+
+  /** Optional Google OAuth2 (recommended for Google Workspace/Gmail). */
+  GMAIL_OAUTH_CLIENT_ID: z.string().optional(),
+  GMAIL_OAUTH_CLIENT_SECRET: z.string().optional(),
+  GMAIL_OAUTH_REFRESH_TOKEN: z.string().optional(),
+
+  /** Optional Gmail API (preferred over SMTP in cloud). */
+  GMAIL_API_CLIENT_ID: z.string().optional(),
+  GMAIL_API_CLIENT_SECRET: z.string().optional(),
+  GMAIL_API_REFRESH_TOKEN: z.string().optional(),
+  GMAIL_API_SENDER: z.string().optional(),
+
   MAIL_FROM: z.string().min(1),
   MAIL_TO: z.string().min(1),
   MAIL_CC: z.string().optional(),
