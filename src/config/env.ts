@@ -1,7 +1,7 @@
 import { config as loadDotenv } from "dotenv";
 import { z } from "zod";
 
-const envSchema = z.object({
+const baseSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   APP_TIMEZONE: z.string().min(1).default("Europe/Bucharest"),
   APP_VERSION: z.string().min(1).default("1.0.0"),
@@ -22,8 +22,9 @@ const envSchema = z.object({
   ATTACH_REPORT_ON_EMPTY: z.coerce.boolean().default(false),
   REPORT_OUTPUT_DIR: z.string().min(1).default("./output"),
 
-  SMTP_HOST: z.string().min(1),
-  SMTP_PORT: z.coerce.number().int().positive(),
+  // SMTP is required only when Gmail API isn't configured.
+  SMTP_HOST: z.string().min(1).optional(),
+  SMTP_PORT: z.coerce.number().int().positive().optional(),
   SMTP_SECURE: z.coerce.boolean().default(false),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
@@ -47,6 +48,32 @@ const envSchema = z.object({
   LOG_LEVEL: z
     .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
     .default("info"),
+});
+
+const envSchema = baseSchema.superRefine((env, ctx) => {
+  const gmailApiConfigured = Boolean(
+    env.GMAIL_API_CLIENT_ID?.trim() &&
+      env.GMAIL_API_CLIENT_SECRET?.trim() &&
+      env.GMAIL_API_REFRESH_TOKEN?.trim() &&
+      env.GMAIL_API_SENDER?.trim(),
+  );
+
+  if (!gmailApiConfigured) {
+    if (!env.SMTP_HOST?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["SMTP_HOST"],
+        message: "Required (SMTP_HOST is required when Gmail API is not configured)",
+      });
+    }
+    if (!env.SMTP_PORT) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["SMTP_PORT"],
+        message: "Required (SMTP_PORT is required when Gmail API is not configured)",
+      });
+    }
+  }
 });
 
 export type AppConfig = z.infer<typeof envSchema>;
